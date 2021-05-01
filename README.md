@@ -1,4 +1,7 @@
 # Movescreen
+>This fork is made for Python3. At this point, no new project should be using
+>Python2.
+
 This Python script moves the window with focus on an adjacent monitor. It is intendend for window managers lacking this shortcut like XFCE. It can also move the mouse cursor.
 
 ## Usage

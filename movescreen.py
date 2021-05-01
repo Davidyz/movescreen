@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 # This script is used to move windows accross monitors, if the window manager
 # does not provide any shortcut.
@@ -8,6 +8,20 @@
 import subprocess
 import re
 import sys
+
+def wmctrl(id, ops):
+    # Execute move command, preserving the states
+    for op in ops:
+        cmd = ['wmctrl', '-i', '-r', id ] + op
+        subprocess.call(cmd)
+
+def isect_area(a, b):
+    # Compute top left and bottom right coords in scr format: [w h x y]
+    tlx = max(a[2], b[2])
+    tly = max(a[3], b[3])
+    brx = min(a[2] + a[0], b[2] + b[0])
+    bry = min(a[3] + a[1], b[3] + b[1])
+    return max (0, brx - tlx) * max (0, bry - tly)
 
 # Parse arguments
 # ==============
@@ -41,7 +55,6 @@ for arg in sys.argv[2:] or 'a':
             print("win_id must be a number!")
             exit(1)
 
-
 # Get screens information
 # =======================
 # scr will store a list of list: [ [ width height offset_x offset_y ] ... ]
@@ -53,13 +66,6 @@ for l in out.splitlines():
     if m:
         scr += [ list(map(int, m.groups()[1:])) ]
 
-def isect_area(a, b):
-    # Compute top left and bottom right coords in scr format: [w h x y]
-    tlx = max(a[2], b[2])
-    tly = max(a[3], b[3])
-    brx = min(a[2] + a[0], b[2] + b[0])
-    bry = min(a[3] + a[1], b[3] + b[1])
-    return max (0, brx - tlx) * max (0, bry - tly)
 
 # r will hold a dict of how screens are disposed between themselves, using their idx
 # e.g. if scr 0 is at left of 1, then r[left][1] == 0 and r[right][0] == 1
@@ -112,7 +118,6 @@ for id in list_id:
                 # Top level window
                 sys.exit(2)
 
-
     # Pocess mouse/window info
     # ========================
 
@@ -135,8 +140,6 @@ for id in list_id:
     npos = [geo[2] - geo[4], geo[3] - geo[5]]
     nsiz = geo[0:2]
 
-    #print scr, npos, nsiz
-
     if dir == 'fit':
         # ... reduce/move window so it fits totally in the screen (taking border into account)
         nsiz = [ min(nsiz[0], nscr[0] - 2*geo[4]), min(nsiz[1], nscr[1] - geo[4] - geo[5]) ]
@@ -153,19 +156,11 @@ for id in list_id:
             for xy in [[0], [1], [0,1]][int(dir_str.index(dir)/2)]:
                 npos[xy] += nscr[2 + xy] - scr[sidx][2 + xy]
 
-    #print scr, npos, nsiz
-
     # Set mouse/window info
     # =========================
     if id == 'mouse':
         subprocess.call(['xdotool', 'mousemove'] + [str(n) for n in npos])
     else:
-        # Execute move command, preserving the states
-        def wmctrl(id, ops):
-            for op in ops:
-                cmd = ['wmctrl', '-i', '-r', id ] + op
-                subprocess.call(cmd)
-
         # wmctrl very pernickety with -b argument, 'add' not really working and 2 props max
         wmctrl(id, [['-b', 'toggle,' + s] for s in state])
         wmctrl(id, [['-e', '0,%d,%d,%d,%d' % tuple(npos+nsiz)]])
